@@ -1,29 +1,29 @@
 // backend/src/services/emailService.js
-// VERSIÓN API (CORREGIDA: Solo envía 'attachment' si hay archivos)
 require('dotenv').config();
 
-// Configuración
+// Configuración API Brevo
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
-const SENDER_EMAIL = process.env.SMTP_USER || "notifications@protesispiernas.com"; 
-const SENDER_NAME = "Becas Tec";
 
-// Helper para enviar usando FETCH
-const sendEmailViaApi = async (toEmail, subject, htmlContent, attachments = []) => {
+// --- TUS 3 REMITENTES OFICIALES ---
+const SENDER_CONTACTO = { name: "Becas Tec", email: "contacto@becas.tec.protesispiernas.com" };
+const SENDER_NOTIFICACIONES = { name: "Notificaciones Becas", email: "notificaciones@becas.tec.protesispiernas.com" };
+const SENDER_FACTURACION = { name: "Facturación Electrónica", email: "facturacion@becas.tec.protesispiernas.com" };
+
+// Helper Flexible (Acepta remitente dinámico)
+const sendEmailViaApi = async (senderIdentity, toEmail, subject, htmlContent, attachments = []) => {
     
     if (!process.env.BREVO_API_KEY) {
         console.error("❌ FALTA LA BREVO_API_KEY en las variables de entorno.");
         return;
     }
 
-    // 1. Creamos el cuerpo BÁSICO (Sin attachments todavía)
     const body = {
-        sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+        sender: senderIdentity, // Usamos el remitente específico
         to: [{ email: toEmail }],
         subject: subject,
         htmlContent: htmlContent
     };
 
-    // 2. Lógica Inteligente: Solo agregamos 'attachment' si el array NO está vacío
     if (attachments && attachments.length > 0) {
         body.attachment = attachments;
     }
@@ -43,10 +43,9 @@ const sendEmailViaApi = async (toEmail, subject, htmlContent, attachments = []) 
             const errorData = await response.json();
             throw new Error(`Error API Brevo: ${JSON.stringify(errorData)}`);
         }
-
-        console.log(`✅ Correo API enviado a: ${toEmail}`);
+        console.log(`✅ Correo enviado a: ${toEmail} (Desde: ${senderIdentity.email})`);
     } catch (error) {
-        console.error(`❌ FALLO ENVÍO API a ${toEmail}:`, error.message);
+        console.error(`❌ FALLO ENVÍO a ${toEmail}:`, error.message);
     }
 };
 
@@ -65,11 +64,10 @@ const styles = {
     footer: 'background-color: #F3F4F6; padding: 30px 40px; text-align: center; border-top: 1px solid #E5E7EB;',
     btn: 'background-color: #0036A0; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 4px; font-weight: bold; display: inline-block; font-size: 16px; margin: 20px 0;',
     label: 'color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;',
-    footerLogos: 'height: 30px; margin: 0 15px; opacity: 0.6; filter: grayscale(100%); vertical-align: middle;',
-    tableCell: 'padding: 12px 10px; border-bottom: 1px solid #E5E7EB; font-size: 13px; color: #4B5563;'
+    footerLogos: 'height: 30px; margin: 0 15px; opacity: 0.6; filter: grayscale(100%); vertical-align: middle;'
 };
 
-// --- 1. CONFIRMACIÓN AL DONANTE ---
+// --- 1. CONFIRMACIÓN AL DONANTE (Usa SENDER_CONTACTO) ---
 const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => {
     const html = `
     <!DOCTYPE html>
@@ -91,10 +89,11 @@ const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => 
         </div>
     </body></html>`;
 
-    await sendEmailViaApi(donorEmail, 'Confirmación de Donativo', html);
+    // 👇 AQUÍ USAMOS EL REMITENTE DE CONTACTO
+    await sendEmailViaApi(SENDER_CONTACTO, donorEmail, 'Confirmación de Donativo', html);
 };
 
-// --- 2. CORREO AL BENEFICIARIO ---
+// --- 2. CORREO AL BENEFICIARIO (Usa SENDER_NOTIFICACIONES) ---
 const sendBeneficiaryNotification = async (email, name, donorName, dedication) => {
     const html = `
     <!DOCTYPE html>
@@ -116,15 +115,13 @@ const sendBeneficiaryNotification = async (email, name, donorName, dedication) =
         </div>
     </body></html>`;
 
-    await sendEmailViaApi(email, `🎁 ${donorName} te envió un mensaje`, html);
+    // 👇 AQUÍ USAMOS EL REMITENTE DE NOTIFICACIONES
+    await sendEmailViaApi(SENDER_NOTIFICACIONES, email, `🎁 ${donorName} te envió un mensaje`, html);
 };
 
-// --- 3. CORREO CFDI ---
+// --- 3. CORREO CFDI (Usa SENDER_FACTURACION) ---
 const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId) => {
-    // Generar XML Falso
     const fakeXML = `<?xml version="1.0" encoding="UTF-8"?><cfdi:Comprobante Total="${amount.toFixed(2)}" Moneda="MXN" Fecha="${new Date().toISOString()}" UsoCFDI="${fiscalData.usoCfdi}"><cfdi:Emisor Rfc="ITE4302154J2"/><cfdi:Receptor Rfc="${fiscalData.rfc}" Nombre="${fiscalData.razon}"/></cfdi:Comprobante>`;
-    
-    // Convertir a Base64 para la API
     const xmlBase64 = Buffer.from(fakeXML).toString('base64');
     const attachments = [{ name: `F-${orderId.substring(0,8)}.xml`, content: xmlBase64 }];
 
@@ -148,7 +145,8 @@ const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId
         </div>
     </body></html>`;
 
-    await sendEmailViaApi(email, `Factura ${orderId.substring(0,6)} - CFDI`, html, attachments);
+    // 👇 AQUÍ USAMOS EL REMITENTE DE FACTURACIÓN
+    await sendEmailViaApi(SENDER_FACTURACION, email, `Factura ${orderId.substring(0,6)} - CFDI`, html, attachments);
 };
 
 module.exports = { sendDonorConfirmation, sendBeneficiaryNotification, sendInvoiceRequestNotification };
