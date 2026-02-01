@@ -1,6 +1,13 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// 1. DIAGNÓSTICO DE CREDENCIALES (Para ver en los logs de Easypanel)
+console.log("🔧 Configurando SMTP con:", {
+    host: process.env.SMTP_HOST,
+    user: process.env.SMTP_USER,
+    passLength: process.env.SMTP_PASS ? process.env.SMTP_PASS.length : 0 // Solo muestra la longitud por seguridad
+});
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
@@ -11,12 +18,14 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// --- RECURSOS VISUALES (URLs Públicas Oficiales) ---
-// Usamos enlaces externos porque los correos no pueden leer archivos locales
-const LOGO_BECAS = "https://brand.tec.mx/sites/default/files/2022-06/Logotipo_Tec_de_Monterrey_azul.png"; // Logo Institucional
-const LOGO_SAT = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/SAT_logo.png/640px-SAT_logo.png"; // Logo SAT
-const LOGO_TECMILENIO = "https://javier.rodriguez.org.mx/itesm/2014/tecmilenio.png";
-const LOGO_TECSALUD = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/TecSalud_logo.png/320px-TecSalud_logo.png";
+// --- RECURSOS VISUALES (Tu Dominio Real) ---
+// Apuntamos a la carpeta 'public/logos' del frontend desplegado
+const DOMINIO_WEB = "https://becas.tec.protesispiernas.com"; 
+
+const LOGO_BECAS = `${DOMINIO_WEB}/logos/logo_tec.png`; 
+const LOGO_SAT = `${DOMINIO_WEB}/logos/logo_SAT.png`;
+const LOGO_TECMILENIO = `${DOMINIO_WEB}/logos/logo_tecmilenio.png`;
+const LOGO_TECSALUD = `${DOMINIO_WEB}/logos/logo_tecsalud.png`;
 
 // Estilos Base (Inline CSS para compatibilidad Gmail/Outlook)
 const styles = {
@@ -79,7 +88,7 @@ const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => 
                 </div>
 
                 <div style="text-align: center; margin-top: 35px;">
-                    <a href="http://localhost:5173" style="${styles.btn}">Descargar Certificados</a>
+                    <a href="${DOMINIO_WEB}" style="${styles.btn}">Descargar Certificados</a>
                     <p style="color: #9CA3AF; font-size: 12px; margin-top: 10px;">Enlace seguro a la plataforma Becas Tec</p>
                 </div>
             </div>
@@ -103,7 +112,7 @@ const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => 
     await transporter.sendMail({ from: '"Becas Tec" <notifications@protesispiernas.com>', to: donorEmail, subject: 'Confirmación de Donativo', html });
 };
 
-// --- 2. CORREO AL BENEFICIARIO (Con Mensaje Real) ---
+// --- 2. CORREO AL BENEFICIARIO ---
 const sendBeneficiaryNotification = async (email, name, donorName, dedication) => {
     const html = `
     <!DOCTYPE html>
@@ -135,7 +144,7 @@ const sendBeneficiaryNotification = async (email, name, donorName, dedication) =
                 </div>
 
                 <div style="text-align: center;">
-                    <a href="http://localhost:5173" style="${styles.btn}">Ver mi Certificado Digital</a>
+                    <a href="${DOMINIO_WEB}" style="${styles.btn}">Ver mi Certificado Digital</a>
                 </div>
             </div>
 
@@ -153,14 +162,33 @@ const sendBeneficiaryNotification = async (email, name, donorName, dedication) =
     await transporter.sendMail({ from: '"Becas Tec" <notifications@protesispiernas.com>', to: email, subject: `🎁 ${donorName} te envió un mensaje`, html });
 };
 
-// --- 3. CORREO CFDI (SIMULACIÓN SAT REALISTA) ---
+// --- 3. CORREO CFDI (CON DATOS FISCALES REALES) ---
 const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId) => {
-    // Cálculos Reales
-    const subtotal = amount / 1.16;
-    const iva = amount - subtotal;
+    // Cálculos
+    const subtotal = amount; 
     const fecha = new Date().toISOString();
     
-    // Cadena Original Simulada (Datos Reales)
+    // Mapeo de Códigos para lectura humana
+    const usoCfdiMap = {
+        'D04': 'D04 - Donativos',
+        'G03': 'G03 - Gastos en general',
+        'S01': 'S01 - Sin efectos fiscales',
+        'CP01': 'CP01 - Pagos'
+    };
+    const regimenMap = {
+        '605': '605 - Sueldos y Salarios e Ingresos Asimilados a Salarios',
+        '626': '626 - Régimen Simplificado de Confianza (RESICO)',
+        '601': '601 - General de Ley Personas Morales',
+        '612': '612 - Personas Físicas con Actividades Empresariales'
+    };
+
+    const usoDesc = usoCfdiMap[fiscalData.usoCfdi] || fiscalData.usoCfdi;
+    const regimenDesc = regimenMap[fiscalData.regimen] || fiscalData.regimen;
+
+    // Dirección Completa
+    const direccionCompleta = `${fiscalData.calle} ${fiscalData.noExt} ${fiscalData.noInt || ''}, ${fiscalData.colonia || ''}, ${fiscalData.municipio || ''}, ${fiscalData.estado || ''}, CP: ${fiscalData.cp}`;
+
+    // Cadena Original Simulada
     const cadenaOriginal = `||1.1|${orderId}|${fecha}|SAT970701NN3|${fiscalData.rfc}|${fiscalData.razon}|${amount.toFixed(2)}|MXN|I|01||`;
 
     const html = `
@@ -195,16 +223,22 @@ const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId
                         <td colspan="2" style="padding: 10px 15px; border-bottom: 1px solid #E5E7EB; font-weight: bold; font-size: 13px; color: #111827;">EMISOR Y RECEPTOR</td>
                     </tr>
                     <tr>
-                        <td width="50%" style="padding: 15px; border-right: 1px solid #E5E7EB;">
+                        <td width="50%" style="padding: 15px; border-right: 1px solid #E5E7EB; vertical-align: top;">
                             <div style="${styles.label}">EMISOR</div>
                             <div style="font-weight: bold; font-size: 13px;">INSTITUTO TECNOLÓGICO Y DE ESTUDIOS SUPERIORES DE MONTERREY</div>
                             <div style="font-size: 12px; color: #6B7280;">ITE4302154J2</div>
+                            <div style="font-size: 11px; color: #9CA3AF; margin-top:4px;">603 - Personas Morales con Fines no Lucrativos</div>
                         </td>
-                        <td width="50%" style="padding: 15px;">
+                        <td width="50%" style="padding: 15px; vertical-align: top;">
                             <div style="${styles.label}">RECEPTOR</div>
                             <div style="font-weight: bold; font-size: 13px;">${fiscalData.razon.toUpperCase()}</div>
                             <div style="font-size: 12px; color: #6B7280;">${fiscalData.rfc.toUpperCase()}</div>
-                            <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">Uso CFDI: G03 - Gastos en general</div>
+                            
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #E5E7EB; font-size: 11px; color: #4B5563; line-height: 1.4;">
+                                <strong>Régimen:</strong> ${regimenDesc}<br>
+                                <strong>Uso CFDI:</strong> ${usoDesc}<br>
+                                <strong style="display:block; margin-top:4px;">Domicilio Fiscal:</strong> ${direccionCompleta.toUpperCase()}
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -212,25 +246,27 @@ const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId
                 <table width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #E5E7EB; margin-bottom: 30px;">
                     <thead>
                         <tr style="background: #0036A0; color: white;">
-                            <th align="left" style="padding: 10px; font-size: 12px;">Concepto</th>
+                            <th align="left" style="padding: 10px; font-size: 12px;">Clave Prod</th>
+                            <th align="left" style="padding: 10px; font-size: 12px;">Descripción</th>
                             <th align="right" style="padding: 10px; font-size: 12px;">Importe</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td style="${styles.tableCell}">84101600</td>
                             <td style="${styles.tableCell}">Donativo para fines educativos</td>
                             <td align="right" style="${styles.tableCell}">$${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         </tr>
                         <tr>
-                            <td align="right" style="padding: 10px; font-weight: bold; font-size: 12px; color: #374151;">Subtotal:</td>
+                            <td colspan="2" align="right" style="padding: 10px; font-weight: bold; font-size: 12px; color: #374151;">Subtotal:</td>
                             <td align="right" style="padding: 10px; font-size: 12px; color: #374151;">$${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
                         </tr>
                         <tr>
-                            <td align="right" style="padding: 5px 10px; font-weight: bold; font-size: 12px; color: #374151;">IVA (16%):</td>
-                            <td align="right" style="padding: 5px 10px; font-size: 12px; color: #374151;">$${iva.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                            <td colspan="2" align="right" style="padding: 5px 10px; font-weight: bold; font-size: 12px; color: #374151;">IVA (0%):</td>
+                            <td align="right" style="padding: 5px 10px; font-size: 12px; color: #374151;">$0.00</td>
                         </tr>
                         <tr style="background: #F3F4F6;">
-                            <td align="right" style="padding: 10px; font-weight: bold; font-size: 14px; color: #0036A0;">TOTAL:</td>
+                            <td colspan="2" align="right" style="padding: 10px; font-weight: bold; font-size: 14px; color: #0036A0;">TOTAL:</td>
                             <td align="right" style="padding: 10px; font-weight: bold; font-size: 14px; color: #0036A0;">$${amount.toLocaleString('en-US', {minimumFractionDigits: 2})} MXN</td>
                         </tr>
                     </tbody>
@@ -245,8 +281,8 @@ const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId
     </body>
     </html>`;
 
-    // XML Falso pero con datos reales incrustados
-    const fakeXML = `<?xml version="1.0" encoding="UTF-8"?><cfdi:Comprobante Total="${amount.toFixed(2)}" Moneda="MXN" Fecha="${new Date().toISOString()}" Sello="...firma_digital..."><cfdi:Emisor Rfc="ITE4302154J2" Nombre="TECNOLOGICO DE MONTERREY"/><cfdi:Receptor Rfc="${fiscalData.rfc}" Nombre="${fiscalData.razon}"/></cfdi:Comprobante>`;
+    // XML simulado
+    const fakeXML = `<?xml version="1.0" encoding="UTF-8"?><cfdi:Comprobante Total="${amount.toFixed(2)}" Moneda="MXN" Fecha="${new Date().toISOString()}" UsoCFDI="${fiscalData.usoCfdi}"><cfdi:Emisor Rfc="ITE4302154J2"/><cfdi:Receptor Rfc="${fiscalData.rfc}" Nombre="${fiscalData.razon}" RegimenFiscalReceptor="${fiscalData.regimen}"/></cfdi:Comprobante>`;
 
     await transporter.sendMail({
         from: '"Facturación Electrónica" <notifications@protesispiernas.com>',
