@@ -12,7 +12,7 @@ const SENDER_FACTURACION = { name: "Facturación Electrónica", email: "facturac
 // --- RECURSOS VISUALES ---
 const DOMINIO_WEB = "https://becas.tec.protesispiernas.com"; 
 
-// Asegúrate de tener estas imágenes en tu hosting (o usa las mismas URLs públicas si no tienes la versión blanca aún)
+// Imágenes y Logos
 const LOGO_BECAS = `${DOMINIO_WEB}/logos/logo_tec.png`; 
 const LOGO_BECAS_BLANCO = `${DOMINIO_WEB}/logos/logo_tec_blanco.png`; // Úsalo sobre fondos oscuros
 const LOGO_SAT = `${DOMINIO_WEB}/logos/logo_SAT.png`;
@@ -79,7 +79,7 @@ const style = {
     footerLogos: 'height: 25px; margin: 0 12px; opacity: 0.5; filter: grayscale(100%); vertical-align: middle;'
 };
 
-// --- HELPER: FOOTER COMÚN (Para no repetir código) ---
+// --- HELPER: FOOTER COMÚN ---
 const getCommonFooter = () => `
     <div style="${style.footer}">
         <div style="margin-bottom: 20px;">
@@ -99,6 +99,10 @@ const getCommonFooter = () => `
 // 1. CONFIRMACIÓN (Estilo "Receipt" Elegante)
 // ==========================================
 const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => {
+    
+    // 👇 URL ACTUALIZADA: Apunta a la página de agradecimiento con el ID
+    const urlCertificado = `${DOMINIO_WEB}/thank-you?order_id=${orderId}`;
+
     const html = `
     <!DOCTYPE html>
     <html>
@@ -132,7 +136,7 @@ const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => 
                     </div>
 
                     <div style="text-align: center;">
-                        <a href="${DOMINIO_WEB}" style="${style.btn}">Descargar Comprobante</a>
+                        <a href="${urlCertificado}" style="${style.btn}">Descargar Comprobante</a>
                     </div>
                 </div>
                 ${getCommonFooter()}
@@ -148,7 +152,12 @@ const sendDonorConfirmation = async (donorEmail, donorName, amount, orderId) => 
 // ==========================================
 // 2. BENEFICIARIO (Estilo "Celebración" Azul)
 // ==========================================
-const sendBeneficiaryNotification = async (email, name, donorName, dedication) => {
+// 👇 OJO: Agregué 'orderId' como parámetro final para poder usarlo en el link
+const sendBeneficiaryNotification = async (email, name, donorName, dedication, orderId) => {
+
+    // 👇 URL ACTUALIZADA: Apunta a la página de agradecimiento con el ID
+    const urlCertificado = `${DOMINIO_WEB}/thank-you?order_id=${orderId}`;
+
     const html = `
     <!DOCTYPE html>
     <html>
@@ -176,7 +185,7 @@ const sendBeneficiaryNotification = async (email, name, donorName, dedication) =
                     </div>
 
                     <div style="text-align: center;">
-                        <a href="${DOMINIO_WEB}" style="${style.btn}">Ver mi Certificado Digital</a>
+                        <a href="${urlCertificado}" style="${style.btn}">Ver mi Certificado Digital</a>
                     </div>
                 </div>
                 ${getCommonFooter()}
@@ -190,7 +199,7 @@ const sendBeneficiaryNotification = async (email, name, donorName, dedication) =
 
 
 // ==========================================
-// 3. CFDI / SAT (Estilo "Documento Oficial")
+// 3. CFDI / SAT (Estilo "Documento Oficial" + Dark Mode)
 // ==========================================
 const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId) => {
     // 1. Cálculos y Mapeos
@@ -213,14 +222,11 @@ const sendInvoiceRequestNotification = async (email, fiscalData, amount, orderId
     <head>
         <style>
             /* LÓGICA DE MODO OSCURO */
-            /* Por defecto (Light Mode), ocultamos la imagen oscura */
             .dark-img { display: none !important; }
 
             /* Si el usuario tiene Dark Mode activado: */
             @media (prefers-color-scheme: dark) {
-                /* Ocultamos la imagen normal */
                 .light-img { display: none !important; }
-                /* Mostramos la imagen blanca */
                 .dark-img { display: block !important; }
             }
         </style>

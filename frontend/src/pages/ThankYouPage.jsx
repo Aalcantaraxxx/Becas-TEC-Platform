@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// 👇 AQUÍ AGREGUÉ 'Clock', 'Mail', 'UserPlus', 'CheckCircle' PARA EVITAR EL CRASH
+// 👇 Iconos
 import { Check, Download, Share2, ArrowLeft, FileText, ShieldCheck, ExternalLink, Bell, User, QrCode, Home, Clock, Mail, UserPlus, CheckCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -54,7 +54,33 @@ const ThankYouPage = () => {
   // Helper para el texto del tiempo
   const getTimeText = () => minutesAgo < 1 ? "Hace un momento" : `Hace ${minutesAgo} min`;
 
-  // --- LÓGICA DE PDF (INTACTA SEGÚN INSTRUCCIÓN) ---
+  // --- LÓGICA DE COMPARTIR (NUEVA) ---
+  const handleShare = async () => {
+    const shareData = {
+        title: '¡Acabo de donar a Becas Tec!',
+        text: `Acabo de apoyar el futuro educativo de un estudiante con Becas Tec. Mi folio de donación es #${order.order_id.substring(0,8)}. ¡Únete tú también!`,
+        url: 'https://becas.tec.protesispiernas.com' // Tu URL pública
+    };
+
+    if (navigator.share) {
+        // Usa el compartir nativo del celular (WhatsApp, Insta, etc.)
+        try {
+            await navigator.share(shareData);
+        } catch (error) {
+            console.log('Error al compartir:', error);
+        }
+    } else {
+        // Fallback para PC: Copia al portapapeles
+        try {
+            await navigator.clipboard.writeText(shareData.url);
+            alert('¡Enlace de Becas Tec copiado al portapapeles!');
+        } catch (err) {
+            console.error('Error al copiar:', err);
+        }
+    }
+  };
+
+  // --- LÓGICA DE PDF (INTACTA) ---
   const handleDownloadPDF = async () => {
     setIsGeneratingPdf(true);
     const input = certificatesRef.current;
@@ -110,14 +136,13 @@ const ThankYouPage = () => {
         {/* Lado Derecho */}
         <div className="flex items-center gap-6">
             
-            {/* NOTIFICACIONES (Datos Reales + Diseño Azul/Neutro) */}
+            {/* NOTIFICACIONES */}
             <div className="relative" ref={notificationRef}>
                 <button 
                     onClick={() => setShowNotifications(!showNotifications)}
                     className={`relative p-2 rounded-full transition-all focus:outline-none ${showNotifications ? 'bg-slate-100 text-[#0036A0]' : 'text-slate-400 hover:bg-slate-50'}`}
                 >
                     <Bell size={22}/>
-                    {/* Indicador azul discreto */}
                     <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#0036A0] rounded-full border-2 border-white"></span>
                 </button>
 
@@ -128,7 +153,6 @@ const ThankYouPage = () => {
                         </div>
                         <div className="max-h-[400px] overflow-y-auto">
                             
-                            {/* 1. Transacción Exitosa (REAL) */}
                             <div className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 flex gap-4">
                                 <div className="mt-1 text-[#0036A0] shrink-0"><CheckCircle size={18}/></div>
                                 <div>
@@ -142,7 +166,6 @@ const ThankYouPage = () => {
                                 </div>
                             </div>
 
-                            {/* 2. Correo Enviado (REAL) */}
                             <div className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 flex gap-4">
                                 <div className="mt-1 text-slate-400 shrink-0"><Mail size={18}/></div>
                                 <div>
@@ -156,7 +179,6 @@ const ThankYouPage = () => {
                                 </div>
                             </div>
 
-                            {/* 3. CTA Crear Cuenta (FUNCIONAL) */}
                             <div className="p-4 bg-blue-50/30 hover:bg-blue-50 transition-colors cursor-pointer group" onClick={() => navigate('/account')}>
                                 <div className="flex gap-4">
                                     <div className="mt-1 text-[#0036A0] shrink-0"><UserPlus size={18}/></div>
@@ -174,7 +196,7 @@ const ThankYouPage = () => {
                 )}
             </div>
             
-            {/* Usuario (Mi Cuenta) */}
+            {/* Usuario */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200 cursor-pointer group" onClick={() => navigate('/account')}>
                 <div className="text-right hidden sm:block">
                     <p className="text-xs font-bold text-slate-900 group-hover:text-[#0036A0] transition-colors">{order.donor_info.name || "Usuario"}</p>
@@ -189,7 +211,7 @@ const ThankYouPage = () => {
 
       <main className="max-w-5xl mx-auto px-6 pt-16">
         
-        {/* HEADER DE ÉXITO (AZUL TEC) */}
+        {/* HEADER */}
         <div className="text-center mb-16 animate-in slide-in-from-bottom-10 duration-700">
             <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-sm ring-8 ring-blue-50/50">
                 <div className="w-12 h-12 bg-[#0036A0] rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-900/30">
@@ -208,7 +230,7 @@ const ThankYouPage = () => {
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden mb-12">
             <div className="grid md:grid-cols-2">
                 
-                {/* LADO IZQUIERDO: PREVIEW VISUAL */}
+                {/* LADO IZQUIERDO: PREVIEW */}
                 <div className="p-10 bg-slate-50/50 flex items-center justify-center border-r border-slate-100 min-h-[400px]">
                     <div className="relative w-full aspect-[1.414/1] shadow-2xl rounded-lg bg-white border border-slate-200 overflow-hidden transform hover:scale-[1.02] transition-transform duration-500 group">
                         
@@ -270,7 +292,11 @@ const ThankYouPage = () => {
                         )}
                     </button>
 
-                    <button className="w-full py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center gap-3">
+                    {/* 👇 BOTÓN DE COMPARTIR ACTUALIZADO */}
+                    <button 
+                        onClick={handleShare}
+                        className="w-full py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center gap-3"
+                    >
                         <Share2 size={20} /> Compartir en Redes Sociales
                     </button>
                 </div>
