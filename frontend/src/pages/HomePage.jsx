@@ -127,7 +127,7 @@ const HomePage = () => {
           </nav>
           
           <div className="flex items-center gap-4">
-            <button className="hidden sm:block text-sm font-bold px-6 py-2.5 rounded-full bg-white border border-slate-200 hover:border-primary hover:text-primary transition-all shadow-sm">
+            <button onClick={() => navigate('/login')} className="hidden sm:block text-sm font-bold px-6 py-2.5 rounded-full bg-white border border-slate-200 hover:border-primary hover:text-primary transition-all shadow-sm">
               Login
             </button>
             <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white shadow-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all">

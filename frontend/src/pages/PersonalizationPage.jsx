@@ -95,7 +95,7 @@ const PersonalizationPage = () => {
         </div>
         <div className="flex items-center gap-4">
             <span className={`text-xs font-bold px-3 py-1 rounded-full bg-slate-100 ${theme.text}`}>{theme.name}</span>
-            <button className="text-slate-400 hover:text-red-500 transition-colors text-sm font-bold">Cancelar</button>
+            <button className="text-slate-400 hover:text-red-500 transition-colors text-sm font-bold" onClick={() => navigate('/')}>Cancelar</button>
         </div>
       </nav>
 
