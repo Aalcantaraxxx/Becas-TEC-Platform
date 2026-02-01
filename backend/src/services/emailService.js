@@ -1,35 +1,39 @@
 // backend/src/services/emailService.js
-// VERSIÓN API (HTTP 443) - A PRUEBA DE FIREWALLS
+// VERSIÓN API (CORREGIDA: Solo envía 'attachment' si hay archivos)
 require('dotenv').config();
 
 // Configuración
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
-const SENDER_EMAIL = process.env.SMTP_USER || "notifications@protesispiernas.com"; // Tu remitente
+const SENDER_EMAIL = process.env.SMTP_USER || "notifications@protesispiernas.com"; 
 const SENDER_NAME = "Becas Tec";
 
-// Helper para enviar usando FETCH (Sin Nodemailer)
+// Helper para enviar usando FETCH
 const sendEmailViaApi = async (toEmail, subject, htmlContent, attachments = []) => {
     
-    // Verificamos que exista la API Key
     if (!process.env.BREVO_API_KEY) {
         console.error("❌ FALTA LA BREVO_API_KEY en las variables de entorno.");
         return;
     }
 
+    // 1. Creamos el cuerpo BÁSICO (Sin attachments todavía)
     const body = {
         sender: { name: SENDER_NAME, email: SENDER_EMAIL },
         to: [{ email: toEmail }],
         subject: subject,
-        htmlContent: htmlContent,
-        attachment: attachments // La API espera array de objetos {name, content(base64)}
+        htmlContent: htmlContent
     };
+
+    // 2. Lógica Inteligente: Solo agregamos 'attachment' si el array NO está vacío
+    if (attachments && attachments.length > 0) {
+        body.attachment = attachments;
+    }
 
     try {
         const response = await fetch(BREVO_API_URL, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
-                'api-key': process.env.BREVO_API_KEY, // Usamos la API Key
+                'api-key': process.env.BREVO_API_KEY,
                 'content-type': 'application/json'
             },
             body: JSON.stringify(body)
