@@ -5,6 +5,8 @@ import ImpactPage from './pages/ImpactPage';
 import CheckoutPage from './pages/CheckoutPage'; 
 import ThankYouPage from './pages/ThankYouPage';
 import AccountPage from './pages/AccountPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/thank-you" element={<ThankYouPage />} />
 
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
       </Routes>
     </BrowserRouter>
   )
