@@ -4,6 +4,9 @@ const cors = require('cors');
 const crypto = require('crypto'); // 👈 Necesario para generar UUIDs de orden
 const { connectDB, pool } = require('./src/config/db.js'); // 👈 Importamos pool para consultas directas
 const authRoutes = require('./src/routes/authRoutes.js');
+const userRoutes = require('./src/routes/userRoutes.js');
+const orderRoutes = require('./src/routes/orderRoutes.js');
+
 
 // 👇 IMPORTAMOS EL SERVICIO DE CORREOS
 const { sendDonorConfirmation, sendBeneficiaryNotification, sendInvoiceRequestNotification } = require('./src/services/emailService.js');
@@ -20,6 +23,8 @@ app.use(express.json());
 
 // 3. Rutas de Autenticación
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/orders', orderRoutes);
 
 // 4. RUTA DE PROCESAMIENTO DE DONACIONES
 app.post('/api/donations/process', async (req, res) => {
