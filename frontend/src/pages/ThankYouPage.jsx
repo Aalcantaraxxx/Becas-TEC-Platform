@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-// 👇 1. Agregamos useSearchParams para leer la URL
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { Check, Download, Share2, ArrowLeft, FileText, ShieldCheck, ExternalLink, Bell, User, QrCode, Home, Clock, Mail, UserPlus, CheckCircle } from 'lucide-react';
+import { Check, Download, Share2, FileText, ShieldCheck, ExternalLink, Bell, User, QrCode, Home, Clock, Mail, UserPlus, CheckCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -11,55 +10,71 @@ import logoPrincipal from '../assets/logos/logo_tec.png';
 const ThankYouPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams(); // Hook para leer ?order_id=...
-
-  // 👇 2. ESTADO INTELIGENTE DE LA ORDEN
-  // Si viene del checkout, usa location.state. Si no, inicia en null para buscarla.
+  const [searchParams] = useSearchParams();
+  
+  // Estado de la orden
   const [order, setOrder] = useState(location.state?.order || null);
-  const [loading, setLoading] = useState(!location.state?.order); // Si no hay orden en memoria, cargamos
+  const [loading, setLoading] = useState(!location.state?.order);
   const [error, setError] = useState(false);
 
+  // Estados visuales y utilidades
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  
-  // Estado para Notificaciones y Menú (TU CÓDIGO)
   const [showNotifications, setShowNotifications] = useState(false);
-  const notificationRef = useRef(null);
-  
-  // Estado para el tiempo transcurrido (TU CÓDIGO)
   const [minutesAgo, setMinutesAgo] = useState(0);
-
-  // Ref para los certificados ocultos
+  
+  const notificationRef = useRef(null);
   const certificatesRef = useRef(null);
 
-  // 👇 3. EFECTO: RECUPERAR ORDEN (LÓGICA NUEVA)
+  // --- 1. RECUPERAR ORDEN (Backend o Memoria) ---
   useEffect(() => {
     const fetchOrder = async () => {
         window.scrollTo(0, 0);
-        
-        // A) Si ya tenemos la orden (venimos de pagar), no hacemos nada
-        if (order) {
+
+        // A) Si ya tenemos la orden completa (del checkout), listo.
+        if (order && order.items && order.design_snapshot) {
             setLoading(false);
             return;
         }
 
         const orderIdFromUrl = searchParams.get('order_id');
 
-        // B) Si no hay orden en memoria NI en la URL, sacamos al usuario
+        // B) Si no hay ID, adiós.
         if (!orderIdFromUrl) {
-            navigate('/');
+            if (!order) navigate('/'); 
             return;
         }
 
-        // C) Si hay ID en la URL, preguntamos al Backend
+        // C) Buscar en Backend
         try {
-            // Ajusta esta URL si tu backend corre en otro puerto
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
             const response = await fetch(`${apiUrl}/api/orders/${orderIdFromUrl}`);
             
             if (!response.ok) throw new Error('Orden no encontrada');
             
             const data = await response.json();
-            setOrder(data); 
+
+            // 🚨 RECONSTRUCCIÓN DE DATOS VISUALES (CRÍTICO)
+            // Si la data viene de la BD, no trae los estilos. Los ponemos por defecto.
+            const enhancedOrder = {
+                ...data,
+                // Si no trae items (backend básico), creamos uno con el nombre del donante o genérico
+                items: data.items && data.items.length > 0 ? data.items : [{ name: data.donor_info.name || "Donante", price: data.total_amount }],
+                // INYECTAMOS EL DISEÑO PARA QUE EL PDF SE VEA BIEN
+                design_snapshot: {
+                    theme: { 
+                        color: "bg-[#0036A0]", 
+                        text: "text-[#0036A0]", 
+                        gradient: "from-blue-900 to-blue-700",
+                        logo: logoPrincipal // Usamos el import local
+                    },
+                    bgStyle: 2, // 2 = Gradiente elegante (tu estilo original)
+                    previewStyle: { previewBg: 'bg-white' },
+                    dedication: data.items?.[0]?.dedication || "Gracias por tu apoyo incondicional.",
+                    cause: "Líderes del Mañana"
+                }
+            };
+
+            setOrder(enhancedOrder);
         } catch (err) {
             console.error("Error recuperando orden:", err);
             setError(true);
@@ -69,17 +84,14 @@ const ThankYouPage = () => {
     };
 
     fetchOrder();
-  }, [navigate, searchParams]); // Quitamos 'order' de dependencias para evitar loops
+  }, [navigate, searchParams]); // Eliminamos 'order' de dependencias para evitar bucle infinito si ya existe
 
-  // 4. Timer en Tiempo Real (TU CÓDIGO INTACTO)
+  // --- UTILIDADES (Timer, Click Outside) ---
   useEffect(() => {
-    const timer = setInterval(() => {
-        setMinutesAgo(prev => prev + 1);
-    }, 60000); 
+    const timer = setInterval(() => setMinutesAgo(prev => prev + 1), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // 5. Cerrar notificaciones (TU CÓDIGO INTACTO)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -90,69 +102,19 @@ const ThankYouPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 👇 6. PANTALLAS DE CARGA Y ERROR (NUEVO)
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-slate-200 border-t-[#0036A0] rounded-full animate-spin"></div>
-            <p className="text-slate-500 font-medium animate-pulse">Recuperando tu certificado...</p>
-        </div>
-    </div>
-  );
-
-  if (error || !order) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] text-center p-6">
-        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">
-            <FileText size={40} />
-        </div>
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">No encontramos esa orden 😕</h1>
-        <p className="text-slate-500 mb-8 max-w-md">El enlace podría estar roto o la orden no existe en nuestros registros.</p>
-        <button onClick={() => navigate('/')} className="bg-[#0036A0] text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-900/20">
-            Volver al Inicio
-        </button>
-    </div>
-  );
-
-  // Helper para el texto del tiempo
-  const getTimeText = () => minutesAgo < 1 ? "Hace un momento" : `Hace ${minutesAgo} min`;
-
-  // --- LÓGICA DE COMPARTIR (TU CÓDIGO) ---
-  const handleShare = async () => {
-    const shareData = {
-        title: '¡Acabo de donar a Becas Tec!',
-        text: `Acabo de apoyar el futuro educativo de un estudiante con Becas Tec. Mi folio de donación es #${order.order_id.substring(0,8)}. ¡Únete tú también!`,
-        url: 'https://becas.tec.protesispiernas.com' 
-    };
-
-    if (navigator.share) {
-        try {
-            await navigator.share(shareData);
-        } catch (error) {
-            console.log('Error al compartir:', error);
-        }
-    } else {
-        try {
-            await navigator.clipboard.writeText(shareData.url);
-            alert('¡Enlace de Becas Tec copiado al portapapeles!');
-        } catch (err) {
-            console.error('Error al copiar:', err);
-        }
-    }
-  };
-
-  // --- LÓGICA DE PDF (TU CÓDIGO INTACTO) ---
+  // --- GENERACIÓN PDF ---
   const handleDownloadPDF = async () => {
+    if (!certificatesRef.current) return;
     setIsGeneratingPdf(true);
-    const input = certificatesRef.current;
     
     try {
-        const pdf = new jsPDF('l', 'mm', 'a4'); 
-        const certificates = input.children; 
+        const pdf = new jsPDF('l', 'mm', 'a4'); // Horizontal
+        const certificates = certificatesRef.current.children; 
 
         for (let i = 0; i < certificates.length; i++) {
             const element = certificates[i];
             const canvas = await html2canvas(element, {
-                scale: 2, 
+                scale: 2, // Mejor calidad
                 useCORS: true, 
                 logging: false,
                 backgroundColor: '#ffffff',
@@ -176,11 +138,51 @@ const ThankYouPage = () => {
     }
   };
 
-  const mainCert = order.items[0]; 
-  const design = order.design_snapshot || {};
-  const theme = design.theme || { color: "bg-[#0036A0]", text: "text-[#0036A0]", gradient: "from-blue-900 to-blue-700" };
+  const handleShare = async () => {
+    if (!order) return;
+    const shareData = {
+        title: '¡Acabo de donar a Becas Tec!',
+        text: `Mi folio de donación es #${order.order_id.substring(0,8)}. ¡Únete tú también!`,
+        url: 'https://becas.tec.protesispiernas.com' 
+    };
+    if (navigator.share) {
+        try { await navigator.share(shareData); } catch (e) { console.log(e); }
+    } else {
+        try { await navigator.clipboard.writeText(shareData.url); alert('Enlace copiado'); } catch (e) { console.error(e); }
+    }
+  };
 
-  // --- TU RENDERIZADO VISUAL (INTACTO) ---
+  // --- RENDERIZADO DE ESTADOS ---
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#0036A0]"></div>
+    </div>
+  );
+
+  if (error || !order) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] text-center p-6">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">No encontramos esa orden 😕</h1>
+        <button onClick={() => navigate('/')} className="bg-[#0036A0] text-white px-6 py-2 rounded-full font-bold">Volver al Inicio</button>
+    </div>
+  );
+
+  // Variables para el render
+  const mainCert = order.items && order.items[0] ? order.items[0] : { name: "Benefactor" };
+  // Aseguramos que design_snapshot y theme existan, si no, usamos defaults
+  const design = order.design_snapshot || { 
+      bgStyle: 2, 
+      dedication: "Gracias por tu apoyo.", 
+      cause: "Líderes del Mañana" 
+  };
+  const theme = design.theme || { 
+      color: "bg-[#0036A0]", 
+      text: "text-[#0036A0]", 
+      gradient: "from-blue-900 to-blue-700",
+      logo: logoPrincipal 
+  };
+  
+  const getTimeText = () => minutesAgo < 1 ? "Hace un momento" : `Hace ${minutesAgo} min`;
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 selection:bg-blue-100 relative">
       
@@ -196,71 +198,42 @@ const ThankYouPage = () => {
         
         {/* Lado Derecho */}
         <div className="flex items-center gap-6">
-            
-            {/* NOTIFICACIONES */}
             <div className="relative" ref={notificationRef}>
-                <button 
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    className={`relative p-2 rounded-full transition-all focus:outline-none ${showNotifications ? 'bg-slate-100 text-[#0036A0]' : 'text-slate-400 hover:bg-slate-50'}`}
-                >
+                <button onClick={() => setShowNotifications(!showNotifications)} className={`relative p-2 rounded-full transition-all focus:outline-none ${showNotifications ? 'bg-slate-100 text-[#0036A0]' : 'text-slate-400 hover:bg-slate-50'}`}>
                     <Bell size={22}/>
                     <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#0036A0] rounded-full border-2 border-white"></span>
                 </button>
-
                 {showNotifications && (
                     <div className="absolute right-0 mt-3 w-96 bg-white shadow-2xl rounded-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                         <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
                             <h4 className="font-bold text-slate-800 text-sm">Actividad Reciente</h4>
                         </div>
                         <div className="max-h-[400px] overflow-y-auto">
-                            
                             <div className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 flex gap-4">
                                 <div className="mt-1 text-[#0036A0] shrink-0"><CheckCircle size={18}/></div>
                                 <div>
                                     <p className="text-xs font-bold text-slate-800">Transacción Exitosa</p>
-                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                        Se generó una donación de <span className="font-bold text-slate-700">${order.total_amount.toLocaleString()} MXN</span> correctamente.
-                                    </p>
-                                    <p className="text-[9px] text-slate-400 mt-1.5 font-medium flex items-center gap-1">
-                                        <Clock size={10}/> {getTimeText()}
-                                    </p>
+                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">Donación de <span className="font-bold text-slate-700">${parseFloat(order.total_amount).toLocaleString()} MXN</span> recibida.</p>
+                                    <p className="text-[9px] text-slate-400 mt-1.5 font-medium flex items-center gap-1"><Clock size={10}/> {getTimeText()}</p>
                                 </div>
                             </div>
-
-                            <div className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-50 flex gap-4">
-                                <div className="mt-1 text-slate-400 shrink-0"><Mail size={18}/></div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-800">Correo Enviado</p>
-                                    <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                        Confirmación y recibo enviados a: <span className="font-medium text-slate-700">{order.donor_info.email}</span>
-                                    </p>
-                                    <p className="text-[9px] text-slate-400 mt-1.5 font-medium flex items-center gap-1">
-                                        <Clock size={10}/> {getTimeText()}
-                                    </p>
-                                </div>
-                            </div>
-
                             <div className="p-4 bg-blue-50/30 hover:bg-blue-50 transition-colors cursor-pointer group" onClick={() => navigate('/account')}>
                                 <div className="flex gap-4">
                                     <div className="mt-1 text-[#0036A0] shrink-0"><UserPlus size={18}/></div>
                                     <div>
                                         <p className="text-xs font-bold text-[#0036A0] group-hover:underline">Guardar mi perfil</p>
-                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                                            Crea una contraseña para guardar tus datos fiscales y facilitar tus futuras donaciones.
-                                        </p>
+                                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">Crea una contraseña para guardar tus datos fiscales.</p>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 )}
             </div>
             
-            {/* Usuario */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200 cursor-pointer group" onClick={() => navigate('/account')}>
                 <div className="text-right hidden sm:block">
-                    <p className="text-xs font-bold text-slate-900 group-hover:text-[#0036A0] transition-colors">{order.donor_info.name || "Usuario"}</p>
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-[#0036A0] transition-colors">{order.donor_info?.name || "Usuario"}</p>
                     <p className="text-[10px] text-slate-400">Mi Cuenta</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center text-slate-500 group-hover:bg-[#0036A0] group-hover:text-white transition-all">
@@ -272,7 +245,7 @@ const ThankYouPage = () => {
 
       <main className="max-w-5xl mx-auto px-6 pt-16">
         
-        {/* HEADER */}
+        {/* HEADER DE ÉXITO */}
         <div className="text-center mb-16 animate-in slide-in-from-bottom-10 duration-700">
             <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-sm ring-8 ring-blue-50/50">
                 <div className="w-12 h-12 bg-[#0036A0] rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-900/30">
@@ -283,28 +256,31 @@ const ThankYouPage = () => {
                 ¡Gracias por transformar una vida!
             </h1>
             <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
-                Tu generosidad impulsa el futuro educativo de miles de estudiantes. Hemos enviado el recibo a <span className="font-bold text-slate-800">{order.donor_info.email}</span>.
+                Tu generosidad impulsa el futuro educativo. Recibo enviado a <span className="font-bold text-slate-800">{order.donor_info?.email}</span>.
             </p>
         </div>
 
-        {/* --- TARJETA PRINCIPAL --- */}
+        {/* --- TARJETA PRINCIPAL (PREVIEW) --- */}
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden mb-12">
             <div className="grid md:grid-cols-2">
                 
-                {/* LADO IZQUIERDO: PREVIEW */}
+                {/* PREVIEW VISUAL (Lado Izquierdo) */}
                 <div className="p-10 bg-slate-50/50 flex items-center justify-center border-r border-slate-100 min-h-[400px]">
                     <div className="relative w-full aspect-[1.414/1] shadow-2xl rounded-lg bg-white border border-slate-200 overflow-hidden transform hover:scale-[1.02] transition-transform duration-500 group">
                         
+                        {/* AQUI SE USAN LOS ESTILOS RECUPERADOS (design / theme) */}
                         <div className={`w-full h-full relative p-6 flex flex-col items-center justify-between text-center ${design.previewStyle?.previewBg || 'bg-white'}`}>
                             {design.bgStyle === 0 && <div className="absolute inset-4 border border-slate-200 pointer-events-none"></div>}
+                            {/* Gradiente Azul (Default si bgStyle=2) */}
                             {design.bgStyle === 2 && <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl ${theme.gradient} opacity-10 rounded-bl-full pointer-events-none`}></div>}
                             {design.bgStyle === 3 && <div className="absolute inset-3 border-double border-4 border-slate-200 pointer-events-none"></div>}
                             
+                            {/* Marca de Agua */}
                             <div className="absolute inset-0 pointer-events-none opacity-10" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50' y='50' font-family='Arial' font-weight='bold' font-size='30' transform='rotate(-45 50 50)' text-anchor='middle' fill='%23000' fill-opacity='0.05'%3ETEC%3C/text%3E%3C/svg%3E")`}}></div>
 
                             <div className="relative z-10 w-full flex flex-col h-full justify-between">
                                 <div className="h-8 flex justify-center items-center gap-2">
-                                    <img src={theme.logo} className="h-full object-contain" alt="Logo" />
+                                    <img src={logoPrincipal} className="h-full object-contain" alt="Logo" />
                                 </div>
 
                                 <div className="flex-1 flex flex-col justify-center gap-1">
@@ -331,11 +307,11 @@ const ThankYouPage = () => {
                     </div>
                 </div>
 
-                {/* LADO DERECHO: ACCIONES */}
+                {/* ACCIONES (Lado Derecho) */}
                 <div className="p-10 md:p-14 flex flex-col justify-center">
                     <h3 className="text-2xl font-extrabold text-slate-900 mb-2">Tu Certificado está listo</h3>
                     <p className="text-slate-500 text-sm mb-8 leading-relaxed">
-                        Este documento digital valida tu aportación. Puedes descargarlo en alta resolución para imprimir o compartir.
+                        Este documento digital valida tu aportación. Puedes descargarlo en alta resolución.
                     </p>
 
                     <button 
@@ -349,7 +325,7 @@ const ThankYouPage = () => {
                                 Generando PDF...
                             </>
                         ) : (
-                            <><Download size={20} /> Descargar Certificado{order.items.length > 1 ? 's' : ''} (PDF)</>
+                            <><Download size={20} /> Descargar Certificado{order.items && order.items.length > 1 ? 's' : ''} (PDF)</>
                         )}
                     </button>
 
@@ -371,7 +347,7 @@ const ThankYouPage = () => {
             </div>
             <div className="grid md:grid-cols-3 gap-8">
                 <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ID DE TRANSACCIÓN</p><p className="font-mono font-bold text-slate-800 text-lg">#{order.order_id}</p></div>
-                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">MONTO TOTAL</p><p className="font-extrabold text-slate-900 text-lg">${order.total_amount.toLocaleString('en-US')} MXN</p></div>
+                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">MONTO TOTAL</p><p className="font-extrabold text-slate-900 text-lg">${parseFloat(order.total_amount).toLocaleString('en-US')} MXN</p></div>
                 <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">FECHA Y HORA</p>
                     <p className="font-medium text-slate-600 capitalize">{new Date(order.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} • {new Date(order.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
@@ -393,9 +369,10 @@ const ThankYouPage = () => {
       </main>
 
       {/* --- HIDDEN CERTIFICATES (VERSIÓN PDF OFICIAL) --- */}
+      {/* Esta sección es idéntica a la visual pero en alta resolución para el PDF */}
       <div style={{ position: 'fixed', left: '-5000px', top: 0 }}>
         <div ref={certificatesRef}>
-            {order.items.map((cert, idx) => (
+            {order.items && order.items.map((cert, idx) => (
                 <div key={idx} style={{ 
                     width: '1122px', 
                     height: '794px', 
@@ -411,6 +388,7 @@ const ThankYouPage = () => {
                     
                     <div className={`absolute inset-0 z-0 ${design.previewStyle?.previewBg || 'bg-white'}`}>
                          {design.bgStyle === 0 && <div className="absolute inset-8 border-4 border-slate-800 opacity-80"></div>}
+                         {/* Gradiente Azul para PDF */}
                          {design.bgStyle === 2 && (
                             <>
                                 <div className={`absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl ${theme.gradient} opacity-10 rounded-bl-full`}></div>
@@ -422,7 +400,7 @@ const ThankYouPage = () => {
 
                     <div className="relative z-10 h-full flex flex-col items-center justify-between">
                         <div className="w-full flex justify-center items-center gap-16 h-32">
-                            <img src={theme.logo} className="h-full object-contain" alt="Logo Institución" style={{maxHeight: '100px'}} />
+                            <img src={logoPrincipal} className="h-full object-contain" alt="Logo Institución" style={{maxHeight: '100px'}} />
                             {design.userLogo && (
                                 <>
                                     <div className="h-20 w-[2px] bg-slate-200"></div>
