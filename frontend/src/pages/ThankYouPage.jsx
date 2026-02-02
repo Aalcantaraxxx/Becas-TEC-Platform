@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-// 👇 Iconos
+// 👇 1. Agregamos useSearchParams para leer la URL
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Check, Download, Share2, ArrowLeft, FileText, ShieldCheck, ExternalLink, Bell, User, QrCode, Home, Clock, Mail, UserPlus, CheckCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -11,34 +11,75 @@ import logoPrincipal from '../assets/logos/logo_tec.png';
 const ThankYouPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const order = location.state?.order;
+  const [searchParams] = useSearchParams(); // Hook para leer ?order_id=...
+
+  // 👇 2. ESTADO INTELIGENTE DE LA ORDEN
+  // Si viene del checkout, usa location.state. Si no, inicia en null para buscarla.
+  const [order, setOrder] = useState(location.state?.order || null);
+  const [loading, setLoading] = useState(!location.state?.order); // Si no hay orden en memoria, cargamos
+  const [error, setError] = useState(false);
+
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
-  // Estado para Notificaciones y Menú
+  // Estado para Notificaciones y Menú (TU CÓDIGO)
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
   
-  // Estado para el tiempo transcurrido (Real-time update)
+  // Estado para el tiempo transcurrido (TU CÓDIGO)
   const [minutesAgo, setMinutesAgo] = useState(0);
 
   // Ref para los certificados ocultos
   const certificatesRef = useRef(null);
 
-  // 1. Protección y Scroll
+  // 👇 3. EFECTO: RECUPERAR ORDEN (LÓGICA NUEVA)
   useEffect(() => {
-    if (!order) navigate('/'); 
-    window.scrollTo(0, 0);
-  }, [order, navigate]);
+    const fetchOrder = async () => {
+        window.scrollTo(0, 0);
+        
+        // A) Si ya tenemos la orden (venimos de pagar), no hacemos nada
+        if (order) {
+            setLoading(false);
+            return;
+        }
 
-  // 2. Timer en Tiempo Real (Actualiza cada 60s)
+        const orderIdFromUrl = searchParams.get('order_id');
+
+        // B) Si no hay orden en memoria NI en la URL, sacamos al usuario
+        if (!orderIdFromUrl) {
+            navigate('/');
+            return;
+        }
+
+        // C) Si hay ID en la URL, preguntamos al Backend
+        try {
+            // Ajusta esta URL si tu backend corre en otro puerto
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${apiUrl}/api/orders/${orderIdFromUrl}`);
+            
+            if (!response.ok) throw new Error('Orden no encontrada');
+            
+            const data = await response.json();
+            setOrder(data); 
+        } catch (err) {
+            console.error("Error recuperando orden:", err);
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    fetchOrder();
+  }, [navigate, searchParams]); // Quitamos 'order' de dependencias para evitar loops
+
+  // 4. Timer en Tiempo Real (TU CÓDIGO INTACTO)
   useEffect(() => {
     const timer = setInterval(() => {
         setMinutesAgo(prev => prev + 1);
-    }, 60000); // 1 minuto
+    }, 60000); 
     return () => clearInterval(timer);
   }, []);
 
-  // 3. Cerrar notificaciones al dar click fuera
+  // 5. Cerrar notificaciones (TU CÓDIGO INTACTO)
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -49,28 +90,47 @@ const ThankYouPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!order) return null;
+  // 👇 6. PANTALLAS DE CARGA Y ERROR (NUEVO)
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-[#0036A0] rounded-full animate-spin"></div>
+            <p className="text-slate-500 font-medium animate-pulse">Recuperando tu certificado...</p>
+        </div>
+    </div>
+  );
+
+  if (error || !order) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] text-center p-6">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6 text-red-500">
+            <FileText size={40} />
+        </div>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">No encontramos esa orden 😕</h1>
+        <p className="text-slate-500 mb-8 max-w-md">El enlace podría estar roto o la orden no existe en nuestros registros.</p>
+        <button onClick={() => navigate('/')} className="bg-[#0036A0] text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-900/20">
+            Volver al Inicio
+        </button>
+    </div>
+  );
 
   // Helper para el texto del tiempo
   const getTimeText = () => minutesAgo < 1 ? "Hace un momento" : `Hace ${minutesAgo} min`;
 
-  // --- LÓGICA DE COMPARTIR (NUEVA) ---
+  // --- LÓGICA DE COMPARTIR (TU CÓDIGO) ---
   const handleShare = async () => {
     const shareData = {
         title: '¡Acabo de donar a Becas Tec!',
         text: `Acabo de apoyar el futuro educativo de un estudiante con Becas Tec. Mi folio de donación es #${order.order_id.substring(0,8)}. ¡Únete tú también!`,
-        url: 'https://becas.tec.protesispiernas.com' // Tu URL pública
+        url: 'https://becas.tec.protesispiernas.com' 
     };
 
     if (navigator.share) {
-        // Usa el compartir nativo del celular (WhatsApp, Insta, etc.)
         try {
             await navigator.share(shareData);
         } catch (error) {
             console.log('Error al compartir:', error);
         }
     } else {
-        // Fallback para PC: Copia al portapapeles
         try {
             await navigator.clipboard.writeText(shareData.url);
             alert('¡Enlace de Becas Tec copiado al portapapeles!');
@@ -80,7 +140,7 @@ const ThankYouPage = () => {
     }
   };
 
-  // --- LÓGICA DE PDF (INTACTA) ---
+  // --- LÓGICA DE PDF (TU CÓDIGO INTACTO) ---
   const handleDownloadPDF = async () => {
     setIsGeneratingPdf(true);
     const input = certificatesRef.current;
@@ -120,6 +180,7 @@ const ThankYouPage = () => {
   const design = order.design_snapshot || {};
   const theme = design.theme || { color: "bg-[#0036A0]", text: "text-[#0036A0]", gradient: "from-blue-900 to-blue-700" };
 
+  // --- TU RENDERIZADO VISUAL (INTACTO) ---
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 selection:bg-blue-100 relative">
       
@@ -292,7 +353,6 @@ const ThankYouPage = () => {
                         )}
                     </button>
 
-                    {/* 👇 BOTÓN DE COMPARTIR ACTUALIZADO */}
                     <button 
                         onClick={handleShare}
                         className="w-full py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 border border-slate-200 transition-all flex items-center justify-center gap-3"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, LogIn } from 'lucide-react';
 import logoPrincipal from '../assets/logos/logo_tec.png';
 
 const LoginPage = () => {
@@ -8,7 +8,6 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Estado del formulario
   const [formData, setFormData] = useState({ email: '', password: '' });
 
   const handleChange = (e) => {
@@ -19,19 +18,36 @@ const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // ⏳ AQUÍ CONECTAREMOS CON TU BACKEND LUEGO
-    console.log("Enviando login:", formData);
-    
-    // Simulación de éxito (borrar cuando conectemos backend)
-    setTimeout(() => {
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        
+        const response = await fetch(`${apiUrl}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al iniciar sesión');
+        }
+
+        // ✅ ÉXITO: Guardamos el token y redirigimos
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_preview', JSON.stringify(data.user)); // Guardamos datos básicos para acceso rápido
+        navigate('/account');
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message); // En prod puedes usar un Toast notification
+    } finally {
         setIsLoading(false);
-        navigate('/account'); // Redirigir al Dashboard
-    }, 1500);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
-      
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
         
         {/* Header */}
@@ -43,7 +59,6 @@ const LoginPage = () => {
                 <h2 className="text-2xl font-bold text-white">¡Hola de nuevo!</h2>
                 <p className="text-blue-200 text-sm mt-1">Ingresa para gestionar tus donaciones.</p>
             </div>
-            {/* Decoración Fondo */}
             <div className="absolute top-0 left-0 w-32 h-32 bg-white opacity-5 rounded-full -ml-10 -mt-10"></div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -mr-10 -mb-10"></div>
         </div>
@@ -51,8 +66,6 @@ const LoginPage = () => {
         {/* Formulario */}
         <div className="p-8">
             <form onSubmit={handleLogin} className="space-y-5">
-                
-                {/* Email */}
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico</label>
                     <div className="relative">
@@ -71,7 +84,6 @@ const LoginPage = () => {
                     </div>
                 </div>
 
-                {/* Password */}
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Contraseña</label>
                     <div className="relative">
@@ -100,22 +112,19 @@ const LoginPage = () => {
                     </div>
                 </div>
 
-                {/* Botón Login */}
                 <button 
                     type="submit" 
                     disabled={isLoading}
                     className="w-full bg-[#0036A0] text-white py-3.5 rounded-xl font-bold text-lg hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                     {isLoading ? (
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     ) : (
                         <>Ingresar <ArrowRight size={20} /></>
                     )}
                 </button>
-
             </form>
 
-            {/* Footer */}
             <div className="mt-8 pt-6 border-t border-slate-100 text-center">
                 <p className="text-slate-500 text-sm">
                     ¿Aún no tienes cuenta?{' '}
@@ -126,13 +135,11 @@ const LoginPage = () => {
             </div>
         </div>
 
-        {/* Aviso Seguro */}
         <div className="bg-slate-50 p-3 text-center border-t border-slate-100">
             <p className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
                 <LogIn size={12} /> Acceso Seguro SSL 256-bit
             </p>
         </div>
-
       </div>
     </div>
   );

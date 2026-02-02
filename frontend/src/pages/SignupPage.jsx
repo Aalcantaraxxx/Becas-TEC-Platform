@@ -7,7 +7,6 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Estado alineado con tu SQL (users table)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -29,13 +28,32 @@ const SignupPage = () => {
     }
     setIsLoading(true);
 
-    // ⏳ AQUÍ CONECTAREMOS CON TU BACKEND (INSERT INTO users...)
-    console.log("Registrando usuario:", formData);
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        
+        const response = await fetch(`${apiUrl}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
 
-    setTimeout(() => {
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Error al registrar usuario');
+        }
+
+        // ✅ ÉXITO: Login automático y redirección
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user_preview', JSON.stringify(data.user));
+        navigate('/account');
+
+    } catch (error) {
+        console.error(error);
+        alert(error.message);
+    } finally {
         setIsLoading(false);
-        navigate('/account'); 
-    }, 1500);
+    }
   };
 
   return (
@@ -43,7 +61,6 @@ const SignupPage = () => {
       <div className="max-w-xl w-full bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
         
         <div className="p-8 md:p-10">
-            {/* Header Simple */}
             <div className="text-center mb-8">
                 <img src={logoPrincipal} className="h-10 mx-auto mb-4" alt="Logo" />
                 <h2 className="text-3xl font-extrabold text-slate-800">Crea tu cuenta</h2>
@@ -51,8 +68,7 @@ const SignupPage = () => {
             </div>
 
             <form onSubmit={handleSignup} className="space-y-5">
-                
-                {/* Nombre y Apellido (Grid) */}
+                {/* Nombre y Apellido */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre(s)</label>
@@ -102,7 +118,6 @@ const SignupPage = () => {
                     </div>
                 </div>
 
-                {/* Botón Registro */}
                 <button 
                     type="submit" 
                     disabled={isLoading}
@@ -116,13 +131,12 @@ const SignupPage = () => {
                 ¿Ya tienes una cuenta? <Link to="/login" className="text-[#0036A0] font-bold hover:underline">Inicia Sesión</Link>
             </div>
         </div>
-
-        {/* Footer Seguro */}
+        
         <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 uppercase tracking-wider font-bold">
             <span className="flex items-center gap-1"><ShieldCheck size={14}/> Datos Encriptados</span>
             <span className="flex items-center gap-1"><CheckCircle size={14}/> Oficial Tec de Monterrey</span>
         </div>
-
+        
       </div>
     </div>
   );
