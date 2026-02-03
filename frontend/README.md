@@ -1,16 +1,69 @@
-# React + Vite
+<h1 align="center">
+  <a href="https://git.io/typing-svg">
+    <img src="https://readme-typing-svg.herokuapp.com/?font=Inter&weight=600&size=30&pause=1000&color=2563EB&center=true&vCenter=true&width=500&lines=Becas+TEC+Platform;Gesti%C3%B3n+de+Becas+Estudiantiles;MERN+Stack+%2B+Docker" alt="Typing SVG" />
+  </a>
+</h1>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<p align="center">
+  <img src="https://img.shields.io/badge/VERSION-v2.1-blue?style=for-the-badge&logo=git&logoColor=white" alt="Version" />
+  <img src="https://img.shields.io/badge/ESTATUS-EN_DESARROLLO-d97706?style=for-the-badge&logo=fire&logoColor=white" alt="Status" />
+  <img src="https://img.shields.io/github/last-commit/aalcantaraxxx/Becas-TEC-Platform?style=for-the-badge&logo=github&color=1e293b" alt="Last Commit" />
+  <a href="https://becas.tec.protesispiernas.com/">
+    <img src="https://img.shields.io/website?down_message=offline&label=LIVE%20SERVER&style=for-the-badge&up_message=online&url=https%3A%2F%2Fbecas.tec.protesispiernas.com%2F&logo=internet-explorer&color=059669" alt="Website Status" />
+  </a>
+</p>
 
-Currently, two official plugins are available:
+<br />
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ⚡ Sobre el Proyecto
 
-## React Compiler
+**Becas TEC Platform** es una solución integral diseñada para digitalizar y optimizar el proceso de solicitud, gestión y asignación de becas estudiantiles.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Este repositorio contiene el código fuente completo, estructurado en una arquitectura de microservicios (Frontend y Backend separados) y contenerizado para un despliegue ágil.
 
-## Expanding the ESLint configuration
+### 🛠️ Tech Stack & Arquitectura
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+<p align="left">
+  <img src="https://img.shields.io/badge/Frontend-React-61DAFB?style=flat-square&logo=react&logoColor=black" />
+  <img src="https://img.shields.io/badge/Estilos-Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" />
+  <img src="https://img.shields.io/badge/Backend-Node.js-339933?style=flat-square&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/API-Express-000000?style=flat-square&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/Database-MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white" />
+  <img src="https://img.shields.io/badge/DevOps-Docker-2496ED?style=flat-square&logo=docker&logoColor=white" />
+</p>
+
+---
+
+## 🚀 Despliegue y Acceso
+
+El proyecto se encuentra actualmente desplegado en un VPS privado y es accesible públicamente.
+
+<div align="center">
+  <a href="https://becas.tec.protesispiernas.com/" target="_blank">
+    <img src="https://img.shields.io/badge/VISITAR_PLATAFORMA-059669?style=for-the-badge&logo=rocket&logoColor=white" alt="Live Demo" />
+  </a>
+</div>
+
+### 📸 Vistas Previas
+
+| **Landing Page** | **Panel de Diseño** |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Aalcantaraxxx/Full-Stack/refs/heads/main/Actividad2/img/Home.png" width="400" alt="Vista Home"> | <img src="https://raw.githubusercontent.com/Aalcantaraxxx/Full-Stack/refs/heads/main/Actividad2/img/Dise%C3%B1ador.png" width="400" alt="Vista Diseñador"> |
+
+---
+
+## 📂 Estructura del Repositorio
+
+El proyecto sigue una estructura modular para facilitar la escalabilidad:
+
+```bash
+Becas-TEC-Platform/
+├── backend/            # API RESTful (Node.js + Express)
+│   ├── routes/         # Definición de endpoints (Auth, Users, Becas)
+│   ├── controllers/    # Lógica de negocio
+│   └── database/       # Conexión y modelos MySQL
+├── frontend/           # Cliente Web (React + Vite)
+│   ├── src/
+│   └── public/
+├── .gitignore          # Archivos excluidos
+└── docker-compose.yml  # Orquestación de contenedores (Próximamente)
