@@ -66,4 +66,4 @@ Becas-TEC-Platform/
 │   ├── src/
 │   └── public/
 ├── .gitignore          # Archivos excluidos
-└── docker-compose.yml  # Orquestación de contenedores (Próximamente)
+└── docker-compose.yml  # Orquestación de contenedores (Próximamente) 
