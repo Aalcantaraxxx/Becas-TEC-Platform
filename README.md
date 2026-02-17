@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/VERSION-v2.1-blue?style=for-the-badge&logo=git&logoColor=white" alt="Version" />
-  <img src="https://img.shields.io/badge/ESTATUS-EN_DESARROLLO-d97706?style=for-the-badge&logo=fire&logoColor=white" alt="Status" />
+  <img src="https://img.shields.io/badge/ESTATUS-FINALIZADO-059669?style=for-the-badge&logo=fire&logoColor=white" alt="Status" />
   <img src="https://img.shields.io/github/last-commit/aalcantaraxxx/Becas-TEC-Platform?style=for-the-badge&logo=github&color=1e293b" alt="Last Commit" />
   <a href="https://becas.tec.protesispiernas.com/">
     <img src="https://img.shields.io/website?down_message=offline&label=LIVE%20SERVER&style=for-the-badge&up_message=online&url=https%3A%2F%2Fbecas.tec.protesispiernas.com%2F&logo=internet-explorer&color=059669" alt="Website Status" />
@@ -59,6 +59,8 @@ El proyecto sigue una estructura modular para facilitar la escalabilidad:
 ```bash
 Becas-TEC-Platform/
 ├── backend/            # API RESTful (Node.js + Express)
+├── src/            
+│   ├── config/         # 
 │   ├── routes/         # Definición de endpoints (Auth, Users, Becas)
 │   ├── controllers/    # Lógica de negocio
 │   └── database/       # Conexión y modelos MySQL
